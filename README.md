@@ -1,8 +1,10 @@
 # Bank statement import into Sure (self-hosted)
 
-Imports ACLEDA-style `.xlsx` bank statements into a self-hosted Sure
-(we-promise/sure) instance via its REST API, triggered from n8n by a
-Telegram file upload.
+Imports ABA-style `.xlsx` bank statements into a self-hosted Sure
+(we-promise/sure) instance via its REST API. Run it by hand from the
+command line, or wire it into n8n so it's triggered by a Telegram file
+upload (the n8n workflow here is a template you import and configure
+yourself — it is not connected to anything until you set it up).
 
 ## How it works
 
@@ -56,8 +58,11 @@ Required:
 
 Optional:
 - `SURE_IMPORT_SOURCE` — `external_id` namespace used for dedup, default
-  `acleda_statement_import`. Only change this if you need statements from
-  different sources to be deduped independently.
+  `acleda_statement_import` (a historical name, not a claim about the
+  bank — left as-is because it's already the `source` on transactions
+  imported so far, and changing it would make the next overlapping
+  import re-create everything as "new"). Only override this if you
+  specifically want statements from different sources deduped separately.
 
 ### 4. Run it
 
@@ -65,7 +70,7 @@ Optional:
 pip install openpyxl
 SURE_API_URL=https://sure.example.com \
 SURE_API_KEY=sk_... \
-SURE_ACCOUNT_NAME="ACLEDA Main" \
+SURE_ACCOUNT_NAME="ABA Savings Account" \
 python3 bank_statement_import.py /path/to/statement.xlsx
 ```
 
@@ -105,8 +110,10 @@ The source `.xlsx` has columns: Date, Transaction Details, Money In, Ccy,
 Money Out, Ccy, Balance, Ccy, with the merchant/payee and a REF# embedded
 inside "Transaction Details" as free text (patterns like "PURCHASE AT X
 ON ...", "FUNDS TRANSFERRED TO X ...", "FUNDS RECEIVED FROM X (...)").
-Data rows start at row 4 (rows 1-3 are header/title rows in the ACLEDA
-export).
+Data rows start at row 4 (rows 1-3 are header/title rows in the ABA
+export). Also handles ABA-specific phrasing for self-service cash
+deposits ("CASH DEPOSIT AT ...", "CASH DEPOSIT FROM QR DEPOSIT TO OWN
+ACCOUNT ...") and "PAYMENT FROM X ..." without a slash separator.
 
 ## Reference: relevant Sure API endpoints
 

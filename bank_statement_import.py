@@ -2,7 +2,7 @@
 """
 bank_statement_import.py
 
-Parses an ACLEDA-style statement (.xlsx) and imports transactions directly
+Parses an ABA-style statement (.xlsx) and imports transactions directly
 into a self-hosted Sure (we-promise/sure) instance via its REST API.
 Deterministic fields (date, amount, currency, ref) are parsed with regex -
 free, instant, no LLM. Merchant name cleanup and category assignment are
@@ -31,6 +31,8 @@ Env vars required:
 
 Optional:
     SURE_IMPORT_SOURCE  external_id namespace, default "acleda_statement_import"
+                        (name is a historical leftover, not a claim about
+                        the bank - see comment at its definition below)
 
 Exit: prints a JSON summary to stdout (rows_imported, rows_skipped_dupe,
 rows_failed) so n8n's "Execute Command" node can parse it directly into a
@@ -50,6 +52,11 @@ SURE_API_URL = os.environ.get("SURE_API_URL", "").rstrip("/")
 SURE_API_KEY = os.environ.get("SURE_API_KEY", "")
 SURE_ACCOUNT_ID = os.environ.get("SURE_ACCOUNT_ID", "")
 SURE_ACCOUNT_NAME = os.environ.get("SURE_ACCOUNT_NAME", "")
+# Kept as "acleda_statement_import" even though the statements are actually
+# ABA: this string is a stable dedup key (Sure scopes external_id by
+# account + source), and transactions already imported live in Sure with
+# this source. Changing the default would make the next run of an
+# overlapping statement re-import everything as "new".
 IMPORT_SOURCE = os.environ.get("SURE_IMPORT_SOURCE", "acleda_statement_import")
 
 
