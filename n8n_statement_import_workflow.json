@@ -1,0 +1,79 @@
+{
+  "name": "Bank Statement Import",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": {
+        "telegramApi": { "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}"
+      },
+      "name": "Download Statement",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [420, 300],
+      "credentials": {
+        "telegramApi": { "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "fileName": "=/tmp/statement_{{ $json.message.message_id }}.xlsx",
+        "options": {}
+      },
+      "name": "Save To Disk",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "command": "=python3 /opt/scripts/bank_statement_import.py /tmp/statement_{{ $json.message.message_id }}.xlsx"
+      },
+      "name": "Run Import Script",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [860, 300],
+      "notes": "Requires SURE_API_URL, SURE_API_KEY, and either SURE_ACCOUNT_ID or SURE_ACCOUNT_NAME set in the n8n process environment (or set them inline in this node's Environment Variables option)."
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = JSON.parse($input.first().json.stdout);\nif (result.error) {\n  return [{ json: { text: `Statement import failed: ${result.error}` } }];\n}\nlet text = `Statement imported.\\nNew rows: ${result.rows_imported}\\nDuplicates skipped: ${result.rows_skipped_dupe}\\nFailed: ${result.rows_failed}`;\nif (result.errors && result.errors.length) {\n  text += `\\n\\nFirst error: REF ${result.errors[0].ref} - status ${result.errors[0].status}`;\n}\nreturn [{ json: { text } }];"
+      },
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.text }}"
+      },
+      "name": "Reply With Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1300, 300],
+      "credentials": {
+        "telegramApi": { "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Download Statement", "type": "main", "index": 0 }]] },
+    "Download Statement": { "main": [[{ "node": "Save To Disk", "type": "main", "index": 0 }]] },
+    "Save To Disk": { "main": [[{ "node": "Run Import Script", "type": "main", "index": 0 }]] },
+    "Run Import Script": { "main": [[{ "node": "Format Summary", "type": "main", "index": 0 }]] },
+    "Format Summary": { "main": [[{ "node": "Reply With Summary", "type": "main", "index": 0 }]] }
+  }
+}
