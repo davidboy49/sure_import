@@ -48,6 +48,16 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
+# Load .env next to this script (stdlib-only dotenv for cron/executeCommand runs)
+_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_ENV_PATH):
+    with open(_ENV_PATH) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+
 SURE_API_URL = os.environ.get("SURE_API_URL", "").rstrip("/")
 SURE_API_KEY = os.environ.get("SURE_API_KEY", "")
 SURE_ACCOUNT_ID = os.environ.get("SURE_ACCOUNT_ID", "")
